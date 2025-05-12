@@ -1,0 +1,296 @@
+--- ori/src/rc_init.c
++++ new/src/rc_init.c
+@@ -23,2 +22,0 @@
+-#include "version.h"
+-
+@@ -37,0 +36,3 @@
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,10,0)
++#include <linux/vmalloc.h>
++#endif
+@@ -179 +180 @@
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 1, 0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,1,0)
+@@ -186 +186,0 @@
+-void        rc_dump_scp(struct scsi_cmnd * scp);
+@@ -193,0 +194,4 @@
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,14,0)
++static int  rc_slave_cfg(struct scsi_device *sdev, struct queue_limits *);
++#else
+@@ -194,0 +199 @@
++#endif
+@@ -201 +206 @@
+-int rc_queue_cmd_lck (struct scsi_cmnd * scp);
++int         rc_queue_cmd_lck(struct scsi_cmnd * scp);
+@@ -230,0 +236,12 @@
++ssize_t rc_read_file(struct file *fp, unsigned char *buf, loff_t size, loff_t pos);
++ssize_t rc_write_file(struct file *fp, const char *buf, loff_t size, loff_t pos);
++struct efi *get_efi(void);
++void rc_shutdown_host(struct Scsi_Host *host_ptr);
++void rcraid_shutdown_one(struct pci_dev *pdev);
++void rc_init_proc(void);
++#if LINUX_VERSION_CODE > KERNEL_VERSION(3,17,0)
++u32 rc_ahci_regread(void *context, u32 offset);
++void rc_ahci_regwrite(void *context, u32 offset, u32 value);
++#endif
++bool is_var_not_supported(unsigned char *device);
++
+@@ -340,0 +358 @@
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,2,0)
+@@ -341,0 +360 @@
++#endif
+@@ -356 +374,0 @@
+-#else
+@@ -357,0 +376 @@
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,14,0)
+@@ -358,0 +378,3 @@
++#else
++	.sdev_configure =          rc_slave_cfg,
++#endif
+@@ -662,0 +685,10 @@
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,3,0)
++	if (!pci_set_dma_mask(dev, DMA_BIT_MASK(64)) &&
++	    !pci_set_consistent_dma_mask(dev, DMA_BIT_MASK(64))) {
++		rc_printk(RC_NOTE, RC_DRIVER_NAME ": %s 64 bit DMA enabled\n",
++			  __FUNCTION__);
++	} else if (!pci_set_dma_mask(dev, DMA_BIT_MASK(32)) &&
++		   !pci_set_consistent_dma_mask(dev, DMA_BIT_MASK(32))) {
++		rc_printk(RC_NOTE, RC_DRIVER_NAME ": %s 64 bit DMA disabled\n",
++			  __FUNCTION__);
++#else
+@@ -668,0 +701 @@
++#endif
+@@ -944,0 +978 @@
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,2,0)
+@@ -945,0 +980 @@
++#endif
+@@ -1215,0 +1251,6 @@
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,3,0)
++		pci_free_consistent(adapter->pdev,
++				    rc_state.memsize_per_controller,
++				    adapter->private_mem.vaddr,
++				    adapter->private_mem.dma_address);
++#else
+@@ -1219,0 +1261 @@
++#endif					
+@@ -1705,3 +1746,0 @@
+-//#if LINUX_VERSION_CODE > KERNEL_VERSION(5,17,0)
+-//	struct scsi_pointer *scsi_pointer = rcraid_scsi_pointer(scp);
+-//#endif
+@@ -1735,2 +1773,0 @@
+-	rc_dump_scp(scp);
+-
+@@ -1748 +1784,0 @@
+-	rc_dump_scp(scp);
+@@ -1759 +1794,0 @@
+-	rc_dump_scp(scp);
+@@ -1769 +1803,0 @@
+-	rc_dump_scp(scp);
+@@ -2341,0 +2376 @@
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,14,0)
+@@ -2342,0 +2378,3 @@
++#else
++rc_slave_cfg(struct scsi_device *sdev, struct queue_limits *limits)
++#endif 
+@@ -2398,0 +2437,2 @@
++		if (sdev->request_queue) {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,10,0)
+@@ -2399,0 +2440,3 @@
++#else
++			sdev->request_queue->limits.max_hw_sectors = 256;
++#endif
+@@ -2400,0 +2444 @@
++    }
+@@ -2504,78 +2547,0 @@
+-
+-void
+-rc_dump_scp(struct scsi_cmnd * scp)
+-{
+-
+-	unsigned char cmd;
+-	rc_scb_t *scb;
+-	int bus, target, lun;
+-	unsigned int lba, sector_count;
+-	unsigned long long  lba16;
+-	int         i;
+-	dma_addr_t      dma_addr;
+-	struct scatterlist  *sg;
+-
+-	if (scp == NULL)
+-		return;
+-	else return;
+-
+-	scb = (rc_scb_t *) scp->cmnd;
+-	cmd = scb->scsi6.opcode;
+-
+-	bus = scp->device->channel;
+-	target = scp->device->id;
+-	lun = scp->device->lun;
+-
+-	rc_printk(RC_DEBUG2, "SCP/SCSI command 0x%02x B/T/L %d/%d/%d\n", cmd,
+-		  bus, target, lun);
+-
+-	switch (cmd) {
+-	case RC_WRITE_6:
+-	case RC_READ_6:
+-		lba = ((scb->scsi6.addr[0] & 0x1f) << 16) | (scb->scsi6.addr[1] << 8)
+-			| scb->scsi6.addr[2];
+-		sector_count = scb->scsi6.len;
+-		rc_printk(RC_DEBUG, "lba: %d len %d\n", lba, sector_count);
+-		break;
+-
+-	case RC_WRITE_10:
+-	case RC_READ_10:
+-		lba = (scb->scsi10.addr[0] << 24) | (scb->scsi10.addr[1] << 16)
+-			| (scb->scsi10.addr[2] << 8) | scb-> scsi10.addr[3];
+-		sector_count = (scb->scsi10.len[0] << 8) | scb->scsi10.len[1];
+-		rc_printk(RC_DEBUG, "lba: %d len %d\n", lba, sector_count);
+-		break;
+-
+-	case RC_WRITE_16:
+-	case RC_READ_16:
+-		lba16 = ((uint64_t)scb->scsi16.addr[0] << 56)
+-			| ((uint64_t)scb->scsi16.addr[1] << 48)
+-			| ((uint64_t)scb->scsi16.addr[2] << 40)
+-			| ((uint64_t)scb->scsi16.addr[3] << 32)
+-			| ((uint64_t)scb->scsi16.addr[4] << 24)
+-			| ((uint64_t)scb->scsi16.addr[5] << 16)
+-			| ((uint64_t)scb->scsi16.addr[6] << 8)
+-			|  (uint64_t)scb->scsi16.addr[7];
+-		sector_count = (scb->scsi16.len[0] << 8) | scb->scsi16.len[1];
+-		rc_printk(RC_DEBUG, "lba: %lld len %d\n", lba16, sector_count);
+-		break;
+-
+-	default:
+-		break;
+-	}
+-
+-	rc_printk(RC_DEBUG2, "    scp: 0x%px sg 0x%px, sg_count %d, len %d\n",
+-		  scp, scsi_sglist(scp), scsi_sg_count(scp), scsi_bufflen(scp));
+-	scsi_for_each_sg(scp, sg, scsi_sg_count(scp), i) {
+-		dma_addr = sg_phys(sg);
+-		rc_printk(RC_DEBUG,
+-#if defined(CONFIG_HIGHMEM64G) ||  defined(CONFIG_X86_64)
+-			  "    page: 0x%px  offset: 0x%x addr: 0x%016llx len %d\n",
+-#else
+-			  "    page: 0x%px  offset: 0x%x addr: 0x%08x len %d\n",
+-#endif
+-			  sg_page(sg), sg->offset, dma_addr, sg->length);
+-	}
+-	rc_printk(RC_DEBUG2,"\n");
+-}
+-
+@@ -2612 +2578 @@
+-#if LINUX_VERSION_CODE <= KERNEL_VERSION(3, 17, 0)
++#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,17,0)
+@@ -2716,0 +2683 @@
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,5,0)
+@@ -2724,19 +2690,0 @@
+-//
+-// Running into issues (first seen on Debian) where '/proc/scsi' doesn't exist.
+-// This results in kernel module panics which can leave things somewhat
+-// unresolved. There's no interface in procfs that allows one to determine
+-// if a node already exists and the one method found (using vfs_path_lookup())
+-// relies on GPL symbols which are not compatible with our proprietary module.
+-//
+-// Move the tree(s) from scsi/rcraid to rcraid to avoid this issue.
+-//
+-
+-#if 0
+-static struct ctl_table rcraid_scsi_dir_table[] = {
+-	{ .procname	= "scsi",
+-	  .mode		= 0555,
+-	  .child	= rcraid_dir_table },
+-	{ }
+-};
+-#endif  /* 0 */
+-
+@@ -2746,3 +2693,0 @@
+-#if 0
+-	  .child	= rcraid_scsi_dir_table },
+-#else
+@@ -2750 +2694,0 @@
+-#endif  /* 0 */
+@@ -2752,0 +2697 @@
++#endif  /* LINUX_VERSION_CODE < KERNEL_VERSION(6,5,0) */
+@@ -2871,0 +2817 @@
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,5,0)
+@@ -2873,2 +2819,4 @@
+-	if (rcraid_sysctl_hdr == NULL)
+-		return -ENOMEM;
++#else
++	rcraid_sysctl_hdr = register_sysctl("dev/rcraid", rcraid_table);
++#endif
++	if (!rcraid_sysctl_hdr) return -ENOMEM;
+--- ori/src/rc_mem_ops.c
++++ new/src/rc_mem_ops.c
+@@ -68,0 +69,3 @@
++int rc_mop_stats(char *buf, int buf_size);
++rc_sg_list_t *rc_mem_sg_list(rc_addr_list_t *ap, rc_uint32_t starting_elem, rc_uint32_t offset, rc_thread_buf_t *buf);
++
+@@ -721 +724 @@
+-static int __inline__
++static __inline__ int
+--- ori/src/rc_msg.c
++++ new/src/rc_msg.c
+@@ -70 +69,0 @@
+-void rc_dump_scp(struct scsi_cmnd * scp );
+@@ -75,0 +75,14 @@
++int rc_vprintf(uint32_t severity, const char *format, va_list ar);
++void rc_check_interrupt(rc_adapter_t* adapter);
++void rc_msg_suspend(rc_softstate_t *state, rc_adapter_t* adapter);
++void rc_msg_resume(rc_softstate_t *state, rc_adapter_t* adapter);
++void rc_msg_pci_config(rc_pci_op_t *pci_op, rc_uint32_t call_type);
++int rc_wq_handler(void *work);
++void rc_msg_resume_work(void);
++void rc_msg_suspend_work(rc_adapter_t *adapter);
++void rc_msg_init_tasklets(rc_softstate_t *state);
++void rc_msg_kill_tasklets(rc_softstate_t *state);
++int rc_msg_init(rc_softstate_t *state);
++void rc_msg_free_dma_memory(rc_adapter_t *adapter, void *cpu_addr, dma_addr_t dmaHandle, rc_uint32_t bytes);
++size_t Min(size_t a, size_t b);
++
+@@ -87,0 +101 @@
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,6,0)
+@@ -89 +102,0 @@
+-
+@@ -90,0 +104,4 @@
++#else
++static void rc_sysrq_intr (u8 key);
++static void rc_sysrq_state (u8 key);
++#endif
+@@ -1615,4 +1631,0 @@
+-	// rc_printk(RC_DEBUG2, "\nrc_msg_send_srb: seq_num: %d B/T/L %d/%d/%d\n",
+-	//           srb->seq_num, bus, target, lun);
+-	// rc_dump_scp(scp);
+-
+@@ -1728 +1740,0 @@
+-		rc_dump_scp((struct scsi_cmnd *) srb->scsi_context);
+@@ -2064,5 +2075,0 @@
+-	/*
+-	 * dump the command that failed
+-	 * Note: Will only see if debug level >= 8.
+-	 */
+-	rc_dump_scp(scp);
+@@ -2199 +2206 @@
+-void __inline__
++__inline__ void
+@@ -2224 +2231 @@
+-void __inline__
++__inline__ void
+@@ -2726 +2733,5 @@
+-static void rc_sysrq_intr (int key)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,6,0)
++	static void rc_sysrq_intr (int key)
++#else
++	static void rc_sysrq_intr (u8 key)
++#endif
+@@ -2743 +2754,5 @@
+-static void rc_sysrq_state (int key)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,6,0)
++	static void rc_sysrq_state (int key)
++#else
++	static void rc_sysrq_state (u8 key)
++#endif
+Files ori/src/rcblob.x86_64 and new/src/rcblob.x86_64 differ
+Files ori/src/rcblob.x86_64.o and new/src/rcblob.x86_64.o differ
