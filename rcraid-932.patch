@@ -183,9 +183,13 @@
 @@ -2612 +2578 @@
 -#if LINUX_VERSION_CODE <= KERNEL_VERSION(3, 17, 0)
 +#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,17,0)
-@@ -2716,0 +2683 @@
+@@ -2713,0 +2680 @@
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,11,0)	
+@@ -2714,0 +2682 @@
++#endif
+@@ -2716,0 +2685 @@
 +#if LINUX_VERSION_CODE < KERNEL_VERSION(6,5,0)
-@@ -2724,19 +2690,0 @@
+@@ -2724,19 +2692,0 @@
 -//
 -// Running into issues (first seen on Debian) where '/proc/scsi' doesn't exist.
 -// This results in kernel module panics which can leave things somewhat
@@ -205,17 +209,17 @@
 -};
 -#endif  /* 0 */
 -
-@@ -2746,3 +2693,0 @@
+@@ -2746,3 +2695,0 @@
 -#if 0
 -	  .child	= rcraid_scsi_dir_table },
 -#else
-@@ -2750 +2694,0 @@
+@@ -2750 +2696,0 @@
 -#endif  /* 0 */
-@@ -2752,0 +2697 @@
+@@ -2752,0 +2699 @@
 +#endif  /* LINUX_VERSION_CODE < KERNEL_VERSION(6,5,0) */
-@@ -2871,0 +2817 @@
+@@ -2871,0 +2819 @@
 +#if LINUX_VERSION_CODE < KERNEL_VERSION(6,5,0)
-@@ -2873,2 +2819,4 @@
+@@ -2873,2 +2821,4 @@
 -	if (rcraid_sysctl_hdr == NULL)
 -		return -ENOMEM;
 +#else
@@ -292,5 +296,10 @@
 +#else
 +	static void rc_sysrq_state (u8 key)
 +#endif
+--- ori/src/rc_srb.h
++++ new/src/rc_srb.h
+@@ -149 +149 @@
+-	rc_sg_elem_t   sg_elem[1];    /* variable size array */
++	rc_sg_elem_t   sg_elem[RC_SG_MAX_ELEMENTS];    /* maybe variable size array, btw i only know its overflow while run scsi_for_each_sg  */
 Files ori/src/rcblob.x86_64 and new/src/rcblob.x86_64 differ
 Files ori/src/rcblob.x86_64.o and new/src/rcblob.x86_64.o differ
