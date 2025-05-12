@@ -1,9 +1,11 @@
-# rcraid-patch-932
+rcraid-patch-932
+===========
 Inofficial patch driver AMD RAID( aka rcraid ) to work in linux 6.14 and above
 
 The code only patch free sdk code driver, dont include rcblob.
 
-## Foreword
+Foreword
+===========
 Many AMD mainboards for the AM4 socket based on the following chipsets come with RAID support:
  * X370 / B350
  * X399
@@ -15,9 +17,11 @@ There is a driver for Windows, but for Linux AMD provides either a binary blob o
 When following the instructions, you will need to recompile the driver and install the kernel module on each kernel update and/or upgrade.
 Since we are in the 21 century and we have software like DKMS, we don't need to do this manually, but let it happen automatically.
 
-## Install for Ubuntu
-Preparation:
+Install for Ubuntu
 ===========
+
+Preparation:
+-----------
   * burn the ISO Image to usb
   * Append `modprobe.blacklist=ahci` to `linux	/casper/vmlinuz  --- quiet splash` and `linux	/casper/vmlinuz nomodeset  --- quiet splash` in USB:/boot/grub/grub.cfg
   * Append `modprobe.blacklist=ahci` to `linux	/casper/vmlinuz  iso-scan/filename=${iso_path} --- quiet splash` and `linux	/casper/vmlinuz nomodeset  iso-scan/filename=${iso_path} --- quiet splash` in USB:/boot/grub/loopback.cfg
@@ -25,10 +29,11 @@ Preparation:
   * Switch to RAID mode
 
 PreInstall:
-===========
+-----------
   * Download 9.3.2 rcraid on AMD offical: https://www.amd.com/en/support/chipsets/amd-socket-strx4/trx40
   * Put rcraid driver into usb
   * Boot your Linux installation from a USB disk
+  * Note: rcraid SDK make only working on Linux filesystem!
 ```
 sudo apt-get update
 sudo apt install build-essential dwarves git mokutil
@@ -44,11 +49,11 @@ sudo modprobe rcraid
 ```
 
 Install:
-===========
+-----------
 * Install Ubuntu
 
 PostInstall (don't restart):
-===========
+-----------
 ```
 sudo chroot /target sed -i.bak -e '/^GRUB_CMDLINE_LINUX_DEFAULT/ s/ *modprobe.blacklist=ahci// ; /^GRUB_CMDLINE_LINUX_DEFAULT/ s/"$/ modprobe.blacklist=ahci"/' /etc/default/grub
 sudo chroot /target sed -i.bak -e '/\/boot\/vmlin/ s/ *modprobe.blacklist=ahci// ; /\/boot\/vmlin/ s/$/ modprobe.blacklist=ahci/' /boot/grub/grub.cfg
@@ -59,14 +64,14 @@ sudo chroot /target mkinitramfs -o /boot/initrd.img-`uname -r` `uname -r`
 reboot
 ```
 
-## Update kernel
+Update kernel
+===========
 ```
-install Kernel
 sudo make clean
 sudo make KDIR=/lib/modules/{folder-with-new-kernel}/build/
 sudo cp rcraid.ko /lib/modules/{folder-with-new-kernel}/kernel/drivers/scsi/rcraid.ko
 sudo depmod -a {folder-with-new-kernel}
 sudo cp -ap /boot/initrd.img-{folder-with-new-kernel} /boot/initrd.img-{folder-with-new-kernel}.bak
 sudo mkinitramfs -o /boot/initrd.img-{folder-with-new-kernel} {folder-with-new-kernel}
-Reboot
+reboot
 ```
