@@ -4,6 +4,12 @@ Inofficial patch driver AMD RAID( aka rcraid ) to work in linux 6.14 and above
 
 The code only patch free sdk code driver, dont include rcblob.
 
+Warning
+===========
+This project is currently unstable, and its rcraid driver performance in Linux is approximately **10 times weaker** than that observed with Windows driver. Therefore, it is **not recommended** for deployment in a production environment.
+
+![](win.png) ![](linux.png)
+
 Foreword
 ===========
 Only Fakeraid Controller in BIOS with modern AMD CPU.
